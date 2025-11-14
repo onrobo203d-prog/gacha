@@ -3,255 +3,329 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>スマホ用ガチャツール</title>
+<title>ガチャツール</title>
 <style>
-body { font-family:sans-serif; margin:0; padding:10px; background:#f0f2f5; }
-.box { background:#fff; padding:12px; border-radius:12px; margin-bottom:12px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
-button { padding:12px; font-size:16px; margin:4px 0; border:none; border-radius:8px; background:#4a7bd0; color:#fff; cursor:pointer; }
-button:hover { opacity:0.85; }
-.two-col { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
-input, select, textarea { width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #aaa; font-size:15px; box-sizing:border-box; }
-.rarity-block { background:#eef2ff; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-details { margin-top:10px; background:#fff; padding:10px; border-radius:6px; }
-label { font-weight:bold; }
-#probDisplay { padding:6px 0; font-size:14px; color:#333; }
+html,body{margin:0;padding:0;font-family:Arial,sans-serif;background:#fafafa;}
+#mainWrapper{padding:15px;}
+
+.section{
+  background:#fff;padding:15px;margin-bottom:15px;border-radius:10px;
+  box-shadow:0 0 4px rgba(0,0,0,0.1);
+}
+
+input[type="number"],input[type="text"],select{
+  width:95%;padding:8px;margin:5px 0;border-radius:5px;
+  border:1px solid #aaa;font-size:14px;
+}
+
+button{cursor:pointer;border:none;border-radius:6px;}
+.add-btn{margin-top:10px;padding:8px 15px;background:#55aaff;color:#fff;}
+
+.gacha-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.gacha-btns button{
+  flex:1;min-width:30%;padding:12px;font-size:16px;background:#ffb34d;color:#fff;
+}
+
+.preset-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:10px;
+}
+.preset-grid button{
+  padding:14px;font-size:16px;background:#7aa8ff;color:#fff;
+}
+
+.copy-btn{margin-top:5px;padding:6px 12px;background:#66cc66;color:#fff;}
+.clear-btn{margin-top:10px;padding:10px 15px;background:#ff6666;color:#fff;}
+.save-btn{margin-top:10px;padding:10px 15px;background:#6666ff;color:#fff;}
+
+.N{color:#00ccff;} .R{color:#0055ff;}
+.SR{color:#aa00ff;} .UR{color:#ff55aa;}
+.LR{color:#ff0000;}
 </style>
 </head>
 <body>
+<div id="mainWrapper">
 
-<!-- 名前管理 -->
-<div class="box">
-  <label>名前を選択：</label>
-  <select id="nameSelect"></select>
-  <input id="nameInput" type="text" placeholder="名前を追加">
-  <button onclick="addName()">追加</button>
+<!-- 名前入力・選択（一覧は削除済） -->
+<div class="section">
+  <label>ガチャを回す人：</label><br>
+  <input id="playerName" type="text" placeholder="名前を入力">
+  <button class="add-btn" onclick="addPlayer()">名前を追加</button><br>
+
+  <!-- ★ 一覧削除済 -->
+
+  <!-- ★ 文言：ガチャ担当 → 下から選択 -->
+  <label>下から選択：</label>
+  <select id="playerSelect"></select>
 </div>
 
-<!-- プリセット / カスタム -->
-<div class="box">
-  <h3>プリセット</h3>
-  <div class="two-col">
-    <button onclick="loadPreset('normal')">通常</button>
-    <button onclick="loadPreset('hard')">キツめ</button>
-    <button onclick="loadPreset('evil')">極悪</button>
-    <button onclick="loadPreset('hell')">地獄</button>
-    <button onclick="loadCustom(1)">カスタム1</button>
-    <button onclick="loadCustom(2)">カスタム2</button>
+<!-- プリセット 2列 -->
+<div class="section">
+  <label>確率プリセット</label>
+  <div class="preset-grid">
+    <button onclick="setPreset('normal')">通常</button>
+    <button onclick="setPreset('hard')">キツめ</button>
+    <button onclick="setPreset('veryhard')">極悪</button>
+    <button onclick="setPreset('hell')">地獄</button>
+    <button onclick="applyCustom()">カスタム適用</button>
   </div>
-  <div id="probDisplay">現在の確率：N- / R- / SR- / UR- / LR-</div>
+</div>
+
+<!-- カスタム確率 -->
+<div class="section">
+  <label><b>選択中プリセット：</b> <span id="presetName">通常</span></label><br><br>
+
+  <label>カスタム確率設定（%）</label><br>
+  N  <input id="rateN" type="number" value="40"><br>
+  R  <input id="rateR" type="number" value="30"><br>
+  SR <input id="rateSR" type="number" value="20"><br>
+  UR <input id="rateUR" type="number" value="7"><br>
+  LR <input id="rateLR" type="number" value="3"><br>
 </div>
 
 <!-- 景品登録 -->
-<div class="box">
-  <h3>景品登録</h3>
-  <div id="itemsContainer"></div>
-  <button onclick="addItem()">景品追加</button>
+<div class="section" id="itemSection">
+  <label>景品登録</label>
+  <div id="items"></div>
+  <button class="add-btn" onclick="addItem()">＋ 景品追加</button>
 </div>
 
 <!-- ガチャ実行 -->
-<div class="box">
-  <h3>ガチャを回す</h3>
-  <button onclick="rollGacha()">1回</button>
-  <button onclick="rollMulti(5)">5回</button>
-  <button onclick="rollMulti(10)">10回</button>
-  <input type="number" id="customCount" placeholder="回数入力">
-  <button onclick="rollCustom()">回す</button>
+<div class="section">
+  <label>ガチャを回す</label><br>
+  <div class="gacha-btns">
+    <button onclick="roll(1)">1回</button>
+    <button onclick="roll(5)">5回</button>
+    <button onclick="roll(10)">10回</button>
+  </div>
+  <input id="customRoll" type="number" placeholder="任意の回数">
+  <button style="margin-top:10px;width:100%;padding:10px;" onclick="rollCustom()">この回数で回す</button>
 </div>
 
-<!-- 集計 -->
-<div class="box">
-  <h3>景品別集計</h3>
-  <div id="summary"></div>
-  <button onclick="copySummary()">コピー</button>
-  <button onclick="saveText(summary.innerText,'summary.txt')">txt保存</button>
+<!-- 結果ログ -->
+<div class="section">
+  <label>ガチャ結果ログ</label><br>
+
+  <label>名前で絞り込み：</label>
+  <select id="logFilter" onchange="filterLog()"></select>
+
+  <div id="log"></div>
+
+  <button class="save-btn" onclick="saveLog()">結果をtxtで保存</button>
+  <button class="clear-btn" onclick="clearLog()">全ログ消去</button>
 </div>
 
-<!-- 詳細ログ -->
-<div class="box">
-  <details>
-    <summary>詳細ログ（開く）</summary>
-    <pre id="log"></pre>
-    <button onclick="copyLog()">コピー</button>
-    <button onclick="saveText(log.innerText,'log.txt')">txt保存</button>
-  </details>
-</div>
-
-<!-- 全ログ消去 -->
-<div class="box">
-  <button onclick="clearAll()">全ログ消去（名前も消える）</button>
 </div>
 
 <script>
-let rarities = [];
+let players = [];
 let logData = [];
-let names = [];
-let customData = {1:[],2:[]};
+addItem();
 
-/* 名前管理 */
-function loadNames(){
-  names = JSON.parse(localStorage.getItem("names")||"[]");
-  const sel = document.getElementById("nameSelect");
-  sel.innerHTML = "";
-  names.forEach(n=>{
-    let op = document.createElement("option");
-    op.textContent = n;
-    sel.appendChild(op);
+/* -------------------------
+      名前の管理（一覧削除済）
+--------------------------*/
+function addPlayer(){
+  const name=document.getElementById("playerName").value.trim();
+  if(!name || players.includes(name)) return;
+  players.push(name);
+
+  updatePlayerUI();
+
+  document.getElementById("playerName").value="";
+}
+
+function updatePlayerUI(){
+  const sel=document.getElementById("playerSelect");
+  const filter=document.getElementById("logFilter");
+
+  sel.innerHTML="";
+  filter.innerHTML='<option value="">全員</option>';
+
+  players.forEach(name=>{
+    let opt=document.createElement("option");
+    opt.value=name; opt.text=name;
+    sel.add(opt);
+
+    let opt2=document.createElement("option");
+    opt2.value=name; opt2.text=name;
+    filter.add(opt2);
   });
 }
-function addName(){
-  const v = document.getElementById("nameInput").value.trim();
-  if(!v) return;
-  names.push(v);
-  localStorage.setItem("names", JSON.stringify(names));
-  document.getElementById("nameInput").value = "";
-  loadNames();
-}
-window.onload = ()=>{
-  loadNames();
-  if(rarities.length===0) initRarities();
-  renderItems(true);
-  updateProbDisplay();
-};
 
-/* 初期化 */
-function initRarities(){
-  const namesOrder = ["N","R","SR","UR","LR"];
-  rarities = namesOrder.map(n=>({name:n, rate:0, items:[""]}));
-}
-
-/* プリセット */
-function updateProbDisplay(){
-  if(rarities.length===0) return;
-  const p = rarities.map(r=>r.name+"-"+r.rate+"%").join(" / ");
-  document.getElementById("probDisplay").textContent = "現在の確率：" + p;
-}
-
-function loadPreset(type){
-  const presetRates = {
-    normal: [40,35,15,7,3],
-    hard:   [60,30,7,2,1],
-    evil:   [70,25,4,1,0.5],
-    hell:   [78.5,20,1,0.49,0.01]
-  };
-  rarities.forEach((r,i)=> r.rate = presetRates[type][i]);
-  renderItems(true);
-  updateProbDisplay();
-}
-
-function loadCustom(num){
-  // 初回作成
-  if(!customData[num] || customData[num].length===0){
-    customData[num] = rarities.map(r=>({name:r.name, rate:r.rate, items:[...r.items]}));
-  }
-  rarities.forEach((r,i)=> r.rate = customData[num][i].rate);
-  renderItems(true);
-  updateProbDisplay();
-}
-
-/* 景品登録 */
-function renderItems(editRates=false){
-  const container = document.getElementById("itemsContainer");
-  container.innerHTML = "";
-  rarities.forEach((r,i)=>{
-    r.items.forEach((it,j)=>{
-      const div = document.createElement("div");
-      div.className = "rarity-block";
-      div.innerHTML = `
-        <input value="${it}" placeholder="景品名" onchange="rarities[${i}].items[${j}]=this.value">
-        <select onchange="rarities[${i}].items[${j}]=this.value">
-          <option ${r.name=="N"?"selected":""}>N</option>
-          <option ${r.name=="R"?"selected":""}>R</option>
-          <option ${r.name=="SR"?"selected":""}>SR</option>
-          <option ${r.name=="UR"?"selected":""}>UR</option>
-          <option ${r.name=="LR"?"selected":""}>LR</option>
-        </select>
-        ${editRates?`<input type="number" value="${r.rate}" style="width:60px;margin-left:6px;" onchange="rarities[${i}].rate=parseFloat(this.value); updateProbDisplay();">`:""}
-        <button onclick="removeItem(${i},${j})">削除</button>
-      `;
-      container.appendChild(div);
-    });
-    // itemsが空の場合は1つ追加
-    if(r.items.length===0) r.items.push("");
-  });
-}
+/* -------------------------
+      景品登録
+--------------------------*/
 function addItem(){
-  if(rarities.length===0) initRarities();
-  rarities[0].items.push("");
-  renderItems(true);
-}
-function removeItem(i,j){
-  rarities[i].items.splice(j,1);
-  renderItems(true);
+  const div=document.createElement("div");
+  div.style.marginTop='8px';
+  div.innerHTML=`
+    <input type="text" placeholder="景品名">
+    <select>
+      <option>N</option><option>R</option><option>SR</option><option>UR</option><option>LR</option>
+    </select>
+    <button onclick="this.parentNode.remove()">×</button>
+  `;
+  document.getElementById('items').appendChild(div);
 }
 
-/* ガチャ処理 */
-function rollOnce(){
-  const total = rarities.reduce((a,b)=>a+b.rate,0);
-  let r = Math.random()*total;
-  for(let rt of rarities){
-    if(r<rt.rate){
-      const item = rt.items.length ? rt.items[Math.floor(Math.random()*rt.items.length)] : "未登録";
-      return {rarity:rt.name, item};
-    }
-    r -= rt.rate;
+/* -------------------------
+      プリセット
+--------------------------*/
+function setPreset(type){
+  const preset={
+    normal:{N:40,R:30,SR:20,UR:7,LR:3},
+    hard:{N:60,R:25,SR:10,UR:4,LR:1},
+    veryhard:{N:70,R:20,SR:8,UR:1.5,LR:0.5},
+    hell:{N:79.9,R:19,SR:1,UR:0.9,LR:0.1}
+  };
+  const p=preset[type];
+  rateN.value=p.N; rateR.value=p.R; rateSR.value=p.SR; rateUR.value=p.UR; rateLR.value=p.LR;
+
+  const name={
+    normal:"通常",hard:"キツめ",veryhard:"極悪",hell:"地獄"
+  };
+  document.getElementById("presetName").textContent=name[type];
+}
+
+function applyCustom(){
+  document.getElementById("presetName").textContent="カスタム";
+  alert("カスタム確率を適用しました");
+}
+
+/* -------------------------
+      ガチャ本体
+--------------------------*/
+function roll(times){
+  const player=document.getElementById("playerSelect").value;
+  if(!player){alert("名前を選択してください");return;}
+
+  const results=[];
+  const items=document.querySelectorAll("#items > div");
+
+  const pool={N:[],R:[],SR:[],UR:[],LR:[]};
+  items.forEach(n=>{
+    let name=n.querySelector("input").value.trim();
+    let rarity=n.querySelector("select").value;
+    if(name) pool[rarity].push(name);
+  });
+
+  const rates={
+    N:parseFloat(rateN.value),
+    R:parseFloat(rateR.value),
+    SR:parseFloat(rateSR.value),
+    UR:parseFloat(rateUR.value),
+    LR:parseFloat(rateLR.value)
+  };
+
+  let keys=[],weights=[];
+  for(let r in rates){
+    if(pool[r].length>0){keys.push(r);weights.push(rates[r]);}
   }
+
+  for(let i=0;i<times;i++){
+    const pick=randomChoice(keys,weights);
+    const item=pool[pick][Math.floor(Math.random()*pool[pick].length)];
+    results.push(`<span class="${pick}">${item} [${pick}]</span>`);
+  }
+
+  addLog(player,results);
 }
 
-function rollGacha(){ rollTimes(1); }
-function rollMulti(n){ rollTimes(n); }
 function rollCustom(){
-  const n = parseInt(document.getElementById("customCount").value) || 1;
-  rollTimes(n);
+  const n=parseInt(document.getElementById("customRoll").value);
+  if(n>0) roll(n);
 }
-function rollTimes(n){
-  const name = document.getElementById("nameSelect").value || "名無し";
-  for(let i=0;i<n;i++){
-    const r = rollOnce();
-    logData.push(`[${name}] 【${r.rarity}】${r.item}`);
+
+function randomChoice(keys,weights){
+  const sum=weights.reduce((a,b)=>a+b,0);
+  let r=Math.random()*sum;
+  for(let i=0;i<keys.length;i++){
+    if(r<weights[i]) return keys[i];
+    r-=weights[i];
   }
-  renderSummary();
 }
 
-/* 集計・ログ表示 */
-function renderSummary(){
-  const sum = {};
-  logData.forEach(line=>{
-    const m = line.match(/【(.+?)】(.+)/);
-    if(!m) return;
-    const rarity = m[1], item = m[2];
-    const key = rarity+"___"+item;
-    sum[key] = (sum[key]||0)+1;
-  });
-  let keys = Object.keys(sum).sort();
-  let html = "";
-  keys.forEach(k=>{
-    const [rar,item] = k.split("___");
-    html += `【${rar}】${item}：${sum[k]}個<br>`;
-  });
-  document.getElementById("summary").innerHTML = html;
-  document.getElementById("log").innerText = logData.join("\n");
+/* -------------------------
+      ログ表示
+--------------------------*/
+function addLog(player,results){
+  logData.push({player,results});
+  displayLog();
 }
 
-/* コピー・保存 */
-function copyLog(){ navigator.clipboard.writeText(document.getElementById("log").innerText); }
-function copySummary(){ navigator.clipboard.writeText(document.getElementById("summary").innerText); }
-function saveText(text,filename){
-  const blob = new Blob([text],{type:"text/plain"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
+function displayLog(){
+  const filter=document.getElementById("logFilter").value;
+  const logDiv=document.getElementById("log");
+  logDiv.innerHTML="";
+
+  let summary={};
+
+  logData.forEach(entry=>{
+    if(filter==="" || entry.player===filter){
+      let wrap=document.createElement("div");
+      wrap.style.marginBottom="10px";
+      wrap.innerHTML=`<b>${entry.player}</b><br>` + entry.results.join("<br>");
+
+      const txt = entry.results.map(x=>x.replace(/<[^>]+>/g,"")).join("\n");
+      wrap.innerHTML += `<br><button class="copy-btn" onclick='navigator.clipboard.writeText(\`${txt}\`)'>コピー</button>`;
+
+      logDiv.prepend(wrap);
+
+      entry.results.forEach(r=>{
+        const txt=r.replace(/<[^>]+>/g,"").split(" [")[0];
+        summary[txt]=(summary[txt]||0)+1;
+      });
+    }
+  });
+
+  if(Object.keys(summary).length>0){
+    const sumDiv=document.createElement("div");
+    sumDiv.style.border="1px solid #333";
+    sumDiv.style.padding="8px";
+    sumDiv.style.background="#eee";
+    sumDiv.innerHTML="<b>集計結果</b><br>"+
+      Object.entries(summary).map(([k,v])=>`${k}: ${v}`).join("<br>");
+    logDiv.prepend(sumDiv);
+  }
+}
+
+function filterLog(){
+  displayLog();
+}
+
+function clearLog(){
+  if(confirm("全ログと登録名を削除しますか？")){
+    logData=[];
+    players=[];
+    updatePlayerUI();
+    displayLog();
+  }
+}
+
+/* -------------------------
+      txt 保存
+--------------------------*/
+function saveLog(){
+  let all="";
+  logData.forEach(entry=>{
+    const txt=entry.results.map(x=>x.replace(/<[^>]+>/g,"")).join("\n");
+    all += `【${entry.player}】\n${txt}\n\n`;
+  });
+
+  const blob=new Blob([all],{type:"text/plain"});
+  const url=URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="gacha_log.txt";
   a.click();
-}
 
-/* 全消去 */
-function clearAll(){
-  if(!confirm("本当に消す？")) return;
-  logData=[];
-  localStorage.removeItem("names");
-  names=[];
-  loadNames();
-  renderSummary();
+  URL.revokeObjectURL(url);
 }
 </script>
+
 </body>
 </html>
