@@ -7,8 +7,6 @@
 
 <style>
     body { font-family: sans-serif; padding: 15px; background: #f5f5f5; }
-
-    h2 { margin-top: 25px; }
     button {
         padding: 10px 14px;
         font-size: 16px;
@@ -20,49 +18,31 @@
         cursor: pointer;
     }
     button:hover { opacity: 0.85; }
-
     .two-col {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        margin-bottom: 10px;
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 6px; margin-bottom: 10px;
     }
-
     .box {
-        background: white;
-        padding: 12px;
-        border-radius: 10px;
-        margin-bottom: 15px;
+        background: white; padding: 12px; border-radius: 10px; margin-bottom: 15px;
     }
-
     textarea, input, select {
-        width: 100%;
-        padding: 8px;
-        font-size: 15px;
-        margin-top: 5px;
-        border-radius: 6px;
-        border: 1px solid #aaa;
+        width: 100%; padding: 8px; font-size: 15px;
+        margin-top: 5px; border-radius: 6px; border: 1px solid #aaa;
     }
-
     .rarity-block {
-        background: #eef2ff;
-        padding: 10px;
-        border-radius: 8px;
+        background: #eef2ff; padding: 10px; border-radius: 8px;
         margin-bottom: 10px;
     }
-
     details {
         margin-top: 10px;
         background: #fff;
-        padding: 10px;
-        border-radius: 6px;
+        padding: 10px; border-radius: 6px;
     }
-
 </style>
 </head>
 <body>
 
-<!-- 名前・ガチャ担当 -->
+<!-- ガチャ担当 -->
 <div class="box">
     <label>下から選択：</label>
     <select id="nameSelect"></select>
@@ -71,26 +51,30 @@
     <button onclick="addName()">追加</button>
 </div>
 
-<!-- プリセット＋カスタム -->
+<!-- プリセット選択 -->
 <div class="box">
     <h3>プリセット / カスタム</h3>
-
     <div class="two-col">
-        <button onclick="loadPreset('easy')">EASY</button>
-        <button onclick="loadPreset('normal')">NORM</button>
-        <button onclick="loadPreset('hard')">HARD</button>
-        <button onclick="loadPreset('hell')">HELL</button>
-
-        <!-- カスタム1 / 2 -->
+        <button onclick="loadPreset('normal')">通常</button>
+        <button onclick="loadPreset('hard')">キツめ</button>
+        <button onclick="loadPreset('evil')">極悪</button>
+        <button onclick="loadPreset('hell')">地獄</button>
         <button onclick="loadCustom(1)">カスタム1</button>
         <button onclick="loadCustom(2)">カスタム2</button>
     </div>
 
+    <!-- カスタム編集欄 -->
     <div class="box" id="customArea" style="display:none;">
-        <h4>カスタム編集</h4>
+        <h4>カスタム編集（確率と景品）</h4>
         <div id="rarityContainer"></div>
         <button onclick="addRarity()">レアリティ追加</button>
         <button onclick="saveCustom()">保存</button>
+    </div>
+
+    <!-- 確率一覧 -->
+    <div class="box">
+        <h4>現在の確率セット</h4>
+        <div id="rateList"></div>
     </div>
 </div>
 
@@ -109,7 +93,7 @@
     <button onclick="saveText(summary.innerText,'summary.txt')">txt保存</button>
 </div>
 
-<!-- 詳細ログ（折りたたみ） -->
+<!-- 詳細ログ -->
 <div class="box">
     <details>
         <summary>詳細ログ（開く）</summary>
@@ -119,26 +103,22 @@
     </details>
 </div>
 
-<!-- 全ログ消去 → 名前も消す -->
+<!-- 全ログ消去 -->
 <div class="box">
     <button onclick="clearAll()">全ログ消去（名前も消える）</button>
 </div>
 
 <script>
-/* ------------------------------
-   保存領域
------------------------------- */
-let rarities = [];           // 今選んでいるレアリティ構成
-let currentCustom = null;    // 1 or 2
+let rarities = [];
+let currentCustom = null;
 let logData = [];
 let names = [];
 
 /* ------------------------------
-   画面初期化
+   初期ロード
 ------------------------------ */
 window.onload = () => {
     loadNames();
-    loadCustomButtons();
 };
 
 /* ------------------------------
@@ -146,15 +126,13 @@ window.onload = () => {
 ------------------------------ */
 function loadNames() {
     names = JSON.parse(localStorage.getItem("names") || "[]");
-    const sel = document.getElementById("nameSelect");
-    sel.innerHTML = "";
+    nameSelect.innerHTML = "";
     names.forEach(n => {
-        const op = document.createElement("option");
+        let op = document.createElement("option");
         op.textContent = n;
-        sel.appendChild(op);
+        nameSelect.appendChild(op);
     });
 }
-
 function addName() {
     const v = nameInput.value.trim();
     if (!v) return;
@@ -171,118 +149,126 @@ function loadPreset(type) {
     currentCustom = null;
     customArea.style.display = "none";
 
-    if (type === "easy") {
-        rarities = [
-            { name:"N", rate:70, items:["普通のグッズA","普通のグッズB"] },
-            { name:"R", rate:25, items:["ちょいレアC"] },
-            { name:"SR", rate:5, items:["SRグッズ"] },
-        ];
-    }
     if (type === "normal") {
         rarities = [
-            { name:"N", rate:60, items:["普通1","普通2"] },
-            { name:"R", rate:30, items:["Rグッズ"] },
-            { name:"SR", rate:9, items:["SRグッズ"] },
-            { name:"LR", rate:1, items:["LRグッズ"] }
+            { name:"N", rate:70, items:["N景品1","N景品2"] },
+            { name:"R", rate:20, items:["R景品"] },
+            { name:"SR", rate:9, items:["SR景品"] },
+            { name:"UR", rate:1, items:["UR景品"] }
         ];
     }
     if (type === "hard") {
         rarities = [
-            { name:"N", rate:40, items:["N1","N2"] },
-            { name:"R", rate:40, items:["R1"] },
-            { name:"SR", rate:18, items:["SR"] },
-            { name:"LR", rate:2, items:["LR"] }
+            { name:"N", rate:80, items:["N景品"] },
+            { name:"R", rate:15, items:["R景品"] },
+            { name:"SR", rate:5, items:["SR景品"] }
+        ];
+    }
+    if (type === "evil") {
+        rarities = [
+            { name:"N", rate:90, items:["N景品"] },
+            { name:"R", rate:9, items:["R景品"] },
+            { name:"SR", rate:1, items:["SR景品"] }
         ];
     }
     if (type === "hell") {
         rarities = [
-            { name:"N", rate:80, items:["N1"] },
-            { name:"R", rate:19, items:["R1"] },
-            { name:"LR", rate:1, items:["地獄LR"] }
+            { name:"N", rate:99.9, items:["N景品"] },
+            { name:"LR", rate:0.1, items:["地獄LR"] }
         ];
     }
-
+    renderRateList();
     renderSummary();
 }
 
 /* ------------------------------
-   カスタム読み込み
+   カスタム読込
 ------------------------------ */
 function loadCustom(num) {
     currentCustom = num;
     customArea.style.display = "block";
 
-    let data = localStorage.getItem("custom" + num);
-    if (data) {
-        rarities = JSON.parse(data);
-    } else {
-        rarities = [];
-    }
+    let data = localStorage.getItem("custom"+num);
+    rarities = data ? JSON.parse(data) : [];
     renderCustomEditor();
+    renderRateList();
 }
 
-/* ------------------------------
-   カスタム編集UI
------------------------------- */
+/* カスタム編集UI */
 function renderCustomEditor() {
-    const area = document.getElementById("rarityContainer");
-    area.innerHTML = "";
+    rarityContainer.innerHTML = "";
 
-    rarities.forEach((r, idx) => {
-        const div = document.createElement("div");
-        div.className = "rarity-block";
+    rarities.forEach((r,i)=>{
+        let div = document.createElement("div");
+        div.className="rarity-block";
         div.innerHTML = `
-            レアリティ名：<input value="${r.name}" onchange="updateRarityName(${idx}, this.value)">
-            確率：<input type="number" value="${r.rate}" onchange="updateRarityRate(${idx}, this.value)">
-            景品一覧（1行＝1種）：
-            <textarea rows="4" onchange="updateRarityItems(${idx}, this.value)">${r.items.join("\n")}</textarea>
+            レアリティ名：
+            <input value="${r.name}" onchange="rarities[${i}].name=this.value">
+
+            確率：
+            <input type="number" value="${r.rate}" onchange="rarities[${i}].rate=Number(this.value)">
+
+            景品一覧（1行1つ）：
+            <textarea rows="4" onchange="updateItems(${i},this.value)">${r.items.join("\n")}</textarea>
         `;
-        area.appendChild(div);
+        rarityContainer.appendChild(div);
     });
 }
 
-/* 更新系 */
-function updateRarityName(i, val) { rarities[i].name = val; }
-function updateRarityRate(i, val) { rarities[i].rate = Number(val); }
-function updateRarityItems(i, val) { rarities[i].items = val.split("\n").filter(x=>x); }
+/* 景品変更 */
+function updateItems(i,val){
+    rarities[i].items = val.split("\n").filter(x=>x);
+}
 
-function addRarity() {
-    rarities.push({ name:"NEW", rate:0, items:["景品"] });
+function addRarity(){
+    rarities.push({name:"NEW",rate:0,items:["景品"]});
     renderCustomEditor();
 }
 
-function saveCustom() {
-    if (!currentCustom) return;
-    localStorage.setItem("custom" + currentCustom, JSON.stringify(rarities));
-    alert("カスタム" + currentCustom + " を保存しました");
+/* カスタム保存 */
+function saveCustom(){
+    if(!currentCustom) return;
+    localStorage.setItem("custom"+currentCustom, JSON.stringify(rarities));
+    alert("カスタム"+currentCustom+" を保存しました");
+    renderRateList();
+}
+
+/* ------------------------------
+   確率一覧表示
+------------------------------ */
+function renderRateList() {
+    let html = "";
+    rarities.forEach(r=>{
+        html += `【${r.name}】 ${r.rate}%<br>`;
+    });
+    rateList.innerHTML = html;
 }
 
 /* ------------------------------
    ガチャ処理
 ------------------------------ */
-function rollOnce() {
+function rollOnce(){
     let total = rarities.reduce((a,b)=>a+b.rate,0);
-    let r = Math.random() * total;
+    let r = Math.random()*total;
 
     for (let rt of rarities) {
         if (r < rt.rate) {
             const item = rt.items[Math.floor(Math.random()*rt.items.length)];
-            return { rarity: rt.name, item };
+            return {rarity:rt.name, item};
         }
         r -= rt.rate;
     }
 }
 
-function rollGacha() {
+function rollGacha(){
     const name = nameSelect.value || "名無し";
     const r = rollOnce();
     logData.push(`[${name}] 【${r.rarity}】${r.item}`);
     renderSummary();
 }
-
-function rollMulti(n) {
+function rollMulti(n){
     const name = nameSelect.value || "名無し";
-    for (let i=0;i<n;i++){
+    for(let i=0;i<n;i++){
         const r = rollOnce();
         logData.push(`[${name}] 【${r.rarity}】${r.item}`);
     }
@@ -290,59 +276,51 @@ function rollMulti(n) {
 }
 
 /* ------------------------------
-   集計表示
+   集計
 ------------------------------ */
-function renderSummary() {
-    const sum = {};
+function renderSummary(){
+    const sum={};
+
     logData.forEach(line=>{
-        const m = line.match(/【(.+?)】(.+)/);
-        if (!m) return;
-        const rarity = m[1];
-        const item = m[2];
-        const key = rarity + "___" + item;
-        sum[key] = (sum[key]||0)+1;
+        const m=line.match(/【(.+?)】(.+)/);
+        if(!m) return;
+        const rarity=m[1], item=m[2];
+        const key=rarity+"___"+item;
+        sum[key]=(sum[key]||0)+1;
     });
 
-    // レアリティ順ソート
-    const keys = Object.keys(sum).sort((a,b)=>{
-        const ra = a.split("___")[0];
-        const rb = b.split("___")[0];
-        return ra.localeCompare(rb);
-    });
-
-    let html = "";
+    let keys=Object.keys(sum).sort();
+    let html="";
     keys.forEach(k=>{
-        const [rar,item] = k.split("___");
-        html += `【${rar}】${item}：${sum[k]}個<br>`;
+        let [rar,item]=k.split("___");
+        html+=`【${rar}】${item}：${sum[k]}個<br>`;
     });
 
-    summary.innerHTML = html;
-    log.innerText = logData.join("\n");
+    summary.innerHTML=html;
+    log.innerText=logData.join("\n");
 }
 
 /* ------------------------------
-   コピー／保存
+   コピー・保存
 ------------------------------ */
 function copyLog(){ navigator.clipboard.writeText(log.innerText); }
 function copySummary(){ navigator.clipboard.writeText(summary.innerText); }
-
-function saveText(text, filename){
-    const blob = new Blob([text], {type:"text/plain"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
+function saveText(text,filename){
+    const blob=new Blob([text],{type:"text/plain"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
     a.click();
 }
 
 /* ------------------------------
-   全消去（ログ＋名前）
+   全消去
 ------------------------------ */
 function clearAll(){
-    if (!confirm("本当に全部消去しますか？\nログ・名前・カスタム以外すべて消えます")) return;
-
-    logData = [];
+    if(!confirm("本当に消す？")) return;
+    logData=[];
     localStorage.removeItem("names");
-    names = [];
+    names=[];
     loadNames();
     renderSummary();
 }
