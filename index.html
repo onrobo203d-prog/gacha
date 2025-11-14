@@ -45,11 +45,13 @@ button{cursor:pointer;border:none;border-radius:6px;}
 .LR{color:#ff0000;}
 
 #logContainer{
-  display:flex; gap:15px;
+  display:flex;
+  flex-direction: column; /* 縦並び */
+  gap:15px;
 }
 
 #summary, #log{
-  background:#f8f8f8; padding:10px; border-radius:8px; flex:1;
+  background:#f8f8f8; padding:10px; border-radius:8px; 
   max-height:500px; overflow:auto;
 }
 
@@ -133,8 +135,8 @@ pre{white-space:pre-wrap;}
   </div>
 
   <div id="logContainer">
-    <div id="summary"></div>
     <div id="log"></div>
+    <div id="summary"></div>
   </div>
 </div>
 
@@ -259,14 +261,7 @@ function displayLog(){
     }
   });
 
-  // 集計表示
-  const sumText=Object.entries(totalSummary).map(([k,v])=>`${k}: ${v}個`).join("\n");
-  const sumTitle = filter==="" ? `全員(${totalTimes}回)` : `${filter}(${totalTimes}回)`;
-  summaryDiv.innerHTML=`<b>集計結果（${sumTitle}）</b><br><pre>${sumText}</pre>
-    <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumTitle}\n${sumText}\`)'>コピー</button>
-    <button class="save-btn" onclick='saveSummary(\`${sumTitle}\n${sumText}\`)'>txt保存</button>`;
-
-  // ログ表示
+  // ログ表示（上）
   latestLogs.forEach(l=>{logDiv.innerHTML+=l.html;});
   if(oldLogs.length>0){
     const oldDiv=document.createElement("div");
@@ -278,6 +273,13 @@ function displayLog(){
     logDiv.appendChild(toggleBtn);
     logDiv.appendChild(oldDiv);
   }
+
+  // 集計表示（下）
+  const sumText=Object.entries(totalSummary).map(([k,v])=>`${k}: ${v}個`).join("\n");
+  const sumTitle = filter==="" ? `全員(${totalTimes}回)` : `${filter}(${totalTimes}回)`;
+  summaryDiv.innerHTML=`<b>集計結果（${sumTitle}）</b><br><pre>${sumText}</pre>
+    <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumTitle}\n${sumText}\`)'>コピー</button>
+    <button class="save-btn" onclick='saveSummary(\`${sumTitle}\n${sumText}\`)'>txt保存</button>`;
 }
 
 /* フィルター・消去・保存 */
