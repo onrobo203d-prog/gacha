@@ -43,7 +43,18 @@ button{cursor:pointer;border:none;border-radius:6px;}
 .N{color:#00ccff;} .R{color:#0055ff;}
 .SR{color:#aa00ff;} .UR{color:#ff55aa;}
 .LR{color:#ff0000;}
-#logControls{margin:5px 0;}
+
+#logContainer{
+  display:flex; gap:15px;
+}
+
+#summary, #log{
+  background:#f8f8f8; padding:10px; border-radius:8px; flex:1;
+  max-height:500px; overflow:auto;
+}
+
+.log-block{margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;}
+.old-log{display:none; font-size:0.9em; color:#333;}
 pre{white-space:pre-wrap;}
 </style>
 </head>
@@ -115,7 +126,10 @@ pre{white-space:pre-wrap;}
     <button class="save-btn" onclick="saveLog()">ログをtxt保存</button>
   </div>
 
-  <div id="log"></div>
+  <div id="logContainer">
+    <div id="summary"></div>
+    <div id="log"></div>
+  </div>
 </div>
 
 </div>
@@ -125,40 +139,29 @@ let players = [];
 let logData = [];
 addItem();
 
-/* -------------------------
-      名前の管理
---------------------------*/
+/* 名前管理 */
 function addPlayer(){
   const name=document.getElementById("playerName").value.trim();
   if(!name || players.includes(name)) return;
   players.push(name);
-
   updatePlayerUI();
-
   document.getElementById("playerName").value="";
 }
 
 function updatePlayerUI(){
   const sel=document.getElementById("playerSelect");
   const filter=document.getElementById("logFilter");
-
   sel.innerHTML="";
   filter.innerHTML='<option value="">全員</option>';
-
   players.forEach(name=>{
     let opt=document.createElement("option");
-    opt.value=name; opt.text=name;
-    sel.add(opt);
-
+    opt.value=name; opt.text=name; sel.add(opt);
     let opt2=document.createElement("option");
-    opt2.value=name; opt2.text=name;
-    filter.add(opt2);
+    opt2.value=name; opt2.text=name; filter.add(opt2);
   });
 }
 
-/* -------------------------
-      景品登録
---------------------------*/
+/* 景品登録 */
 function addItem(){
   const div=document.createElement("div");
   div.style.marginTop='8px';
@@ -172,9 +175,7 @@ function addItem(){
   document.getElementById('items').appendChild(div);
 }
 
-/* -------------------------
-      プリセット
---------------------------*/
+/* プリセット */
 function setPreset(type){
   const preset={
     normal:{N:40,R:30,SR:20,UR:7,LR:3},
@@ -184,184 +185,106 @@ function setPreset(type){
   };
   const p=preset[type];
   rateN.value=p.N; rateR.value=p.R; rateSR.value=p.SR; rateUR.value=p.UR; rateLR.value=p.LR;
-
-  const name={
-    normal:"通常",hard:"キツめ",veryhard:"極悪",hell:"地獄"
-  };
+  const name={normal:"通常",hard:"キツめ",veryhard:"極悪",hell:"地獄"};
   document.getElementById("presetName").textContent=name[type];
 }
+function applyCustom(){document.getElementById("presetName").textContent="カスタム"; alert("カスタム確率を適用しました");}
 
-function applyCustom(){
-  document.getElementById("presetName").textContent="カスタム";
-  alert("カスタム確率を適用しました");
-}
-
-/* -------------------------
-      ガチャ本体
---------------------------*/
+/* ガチャ本体 */
 function roll(times){
   const player=document.getElementById("playerSelect").value;
   if(!player){alert("名前を選択してください");return;}
-
   const results=[];
   const items=document.querySelectorAll("#items > div");
-
   const pool={N:[],R:[],SR:[],UR:[],LR:[]};
   items.forEach(n=>{
     let name=n.querySelector("input").value.trim();
     let rarity=n.querySelector("select").value;
     if(name) pool[rarity].push(name);
   });
-
-  const rates={
-    N:parseFloat(rateN.value),
-    R:parseFloat(rateR.value),
-    SR:parseFloat(rateSR.value),
-    UR:parseFloat(rateUR.value),
-    LR:parseFloat(rateLR.value)
-  };
-
+  const rates={N:parseFloat(rateN.value),R:parseFloat(rateR.value),SR:parseFloat(rateSR.value),UR:parseFloat(rateUR.value),LR:parseFloat(rateLR.value)};
   let keys=[],weights=[];
-  for(let r in rates){
-    if(pool[r].length>0){keys.push(r);weights.push(rates[r]);}
-  }
-
+  for(let r in rates){if(pool[r].length>0){keys.push(r);weights.push(rates[r]);}}
   for(let i=0;i<times;i++){
     const pick=randomChoice(keys,weights);
     const item=pool[pick][Math.floor(Math.random()*pool[pick].length)];
-    results.push(`<span class="${pick}">${item} [${pick}]</span>`);
+    results.push({name:item,rarity:pick});
   }
-
-  addLog(player,results);
+  addLog(player,results,times);
 }
+function rollCustom(){const n=parseInt(document.getElementById("customRoll").value); if(n>0) roll(n);}
+function randomChoice(keys,weights){const sum=weights.reduce((a,b)=>a+b,0); let r=Math.random()*sum; for(let i=0;i<keys.length;i++){if(r<weights[i]) return keys[i]; r-=weights[i];}}
 
-function rollCustom(){
-  const n=parseInt(document.getElementById("customRoll").value);
-  if(n>0) roll(n);
-}
-
-function randomChoice(keys,weights){
-  const sum=weights.reduce((a,b)=>a+b,0);
-  let r=Math.random()*sum;
-  for(let i=0;i<keys.length;i++){
-    if(r<weights[i]) return keys[i];
-    r-=weights[i];
-  }
-}
-
-/* -------------------------
-      ログ表示
---------------------------*/
-function addLog(player,results){
-  logData.push({player,results});
+/* ログ表示 */
+function addLog(player,results,times){
+  logData.push({player,results,times});
   displayLog();
 }
-
 function displayLog(){
   const filter=document.getElementById("logFilter").value;
+  const summaryDiv=document.getElementById("summary");
   const logDiv=document.getElementById("log");
-  logDiv.innerHTML="";
+  summaryDiv.innerHTML=""; logDiv.innerHTML="";
 
-  let summary={};
+  // 集計用
+  let totalSummary={};
 
-  logData.forEach((entry, idx)=>{
+  // 最新ログと古いログ分け
+  let latestLogs=[], oldLogs=[];
+
+  logData.forEach((entry,idx)=>{
     if(filter==="" || entry.player===filter){
-      const wrap=document.createElement("div");
-      wrap.style.marginBottom="10px";
-
-      const header=document.createElement("div");
-      header.innerHTML=`<b>${entry.player}</b> <button onclick="toggleLog(${idx})">詳細確認</button>`;
-      wrap.appendChild(header);
-
-      const content=document.createElement("div");
-      content.id=`logContent_${idx}`;
-      content.style.display="none";
-      content.innerHTML=entry.results.join("<br>") + `<br>
-        <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${entry.results.map(x=>x.replace(/<[^>]+>/g,"")).join("\n")}\`)'>コピー</button>`;
-      wrap.appendChild(content);
-
-      logDiv.prepend(wrap);
-
+      const countMap={};
       entry.results.forEach(r=>{
-        const match = r.match(/<span class="(\w+)">(.+?) \[\w+\]<\/span>/);
-        if(match){
-          const rarity=match[1];
-          const name=match[2];
-          const key=`【${rarity}】${name}`;
-          summary[key]=(summary[key]||0)+1;
-        }
+        const key=`【${r.rarity}】${r.name}`;
+        countMap[key]=(countMap[key]||0)+1;
+        totalSummary[key]=(totalSummary[key]||0)+1;
       });
+      const logText=Object.entries(countMap).map(([k,v])=>`  ${k} ×${v}個`).join("\n");
+      const logBlock={
+        html:`<div class="log-block"><b>${entry.player}（${entry.times}回）</b><pre>${logText}</pre><button class="copy-btn" onclick='navigator.clipboard.writeText(\`${logText}\`)'>コピー</button></div>`,
+        idx
+      };
+      if(idx>=logData.length-3){ // 最新3件を展開
+        latestLogs.push(logBlock);
+      }else{
+        oldLogs.push(logBlock);
+      }
     }
   });
 
-  // 集計結果
-  if(Object.keys(summary).length>0){
-    const sumDiv=document.createElement("div");
-    sumDiv.style.border="1px solid #333";
-    sumDiv.style.padding="8px";
-    sumDiv.style.background="#eee";
+  // 集計表示
+  const sumText=Object.entries(totalSummary).map(([k,v])=>`${k}: ${v}個`).join("\n");
+  summaryDiv.innerHTML=`<b>集計結果（表示中）</b><br><pre>${sumText}</pre>
+    <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumText}\`)'>コピー</button>
+    <button class="save-btn" onclick='saveSummary(\`${sumText}\`)'>txt保存</button>`;
 
-    const sumText = Object.entries(summary).map(([k,v])=>`${k}: ${v}個`).join("\n");
-    sumDiv.innerHTML=`<b>集計結果</b><br><pre>${sumText}</pre>
-      <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumText}\`)'>コピー</button>
-      <button class="save-btn" onclick='saveSummary(\`${sumText}\`)'>txt保存</button>`;
-
-    logDiv.prepend(sumDiv);
+  // ログ表示（最新→古い）
+  latestLogs.forEach(l=>{logDiv.innerHTML+=l.html;});
+  if(oldLogs.length>0){
+    const oldDiv=document.createElement("div");
+    oldDiv.className="old-log";
+    oldLogs.forEach(l=>{oldDiv.innerHTML+=l.html;});
+    const toggleBtn=document.createElement("button");
+    toggleBtn.textContent="古いログを展開";
+    toggleBtn.onclick=()=>{oldDiv.style.display=(oldDiv.style.display==="none"?"block":"none");};
+    logDiv.appendChild(toggleBtn);
+    logDiv.appendChild(oldDiv);
   }
 }
 
-function toggleLog(idx){
-  const el=document.getElementById(`logContent_${idx}`);
-  if(el.style.display==="none") el.style.display="block";
-  else el.style.display="none";
-}
-
-function filterLog(){
-  displayLog();
-}
-
-function clearLog(){
-  if(confirm("全ログと登録名を削除しますか？")){
-    logData=[];
-    players=[];
-    updatePlayerUI();
-    displayLog();
-  }
-}
-
-/* -------------------------
-      txt 保存
---------------------------*/
+/* フィルター・消去・保存 */
+function filterLog(){displayLog();}
+function clearLog(){if(confirm("全ログと登録名を削除しますか？")){logData=[];players=[];updatePlayerUI();displayLog();}}
 function saveLog(){
   let all="";
-  logData.forEach(entry=>{
-    const txt=entry.results.map(x=>x.replace(/<[^>]+>/g,"")).join("\n");
-    all += `【${entry.player}】\n${txt}\n\n`;
-  });
-
+  logData.forEach(entry=>{const txt=entry.results.map(r=>`【${r.rarity}】${r.name}`).join("\n"); all+=`【${entry.player}】\n${txt}\n\n`;});
   const blob=new Blob([all],{type:"text/plain"});
   const url=URL.createObjectURL(blob);
-
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="gacha_log.txt";
-  a.click();
-
+  const a=document.createElement("a"); a.href=url; a.download="gacha_log.txt"; a.click();
   URL.revokeObjectURL(url);
 }
-
-function saveSummary(text){
-  const blob=new Blob([text],{type:"text/plain"});
-  const url=URL.createObjectURL(blob);
-
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="gacha_summary.txt";
-  a.click();
-
-  URL.revokeObjectURL(url);
-}
+function saveSummary(text){const blob=new Blob([text],{type:"text/plain"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="gacha_summary.txt"; a.click(); URL.revokeObjectURL(url);}
 </script>
-
 </body>
 </html>
