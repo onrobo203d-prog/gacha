@@ -237,10 +237,11 @@ function displayLog(){
   let filteredLogs = logData.filter(entry=>filter===""||entry.player===filter);
   if(sortOrder==="desc") filteredLogs = filteredLogs.slice().reverse();
 
-  let totalSummary={};
+  let totalSummary={}, totalTimes=0;
   let latestLogs=[], oldLogs=[];
 
   filteredLogs.forEach((entry,idx)=>{
+    totalTimes += entry.times;
     const countMap={};
     entry.results.forEach(r=>{
       const key=`【${r.rarity}】${r.name}`;
@@ -249,7 +250,7 @@ function displayLog(){
     });
     const logText=Object.entries(countMap).map(([k,v])=>`  ${k} ×${v}個`).join("\n");
     const logBlock={
-      html:`<div class="log-block"><b>${entry.player}（${entry.times}回）</b><pre>${logText}</pre><button class="copy-btn" onclick='navigator.clipboard.writeText(\`${logText}\`)'>コピー</button></div>`
+      html:`<div class="log-block"><b>${entry.player}（${entry.times}回）</b><pre>${logText}</pre><button class="copy-btn" onclick='navigator.clipboard.writeText(\`${entry.player}(${entry.times}回)\n${logText}\`)'>コピー</button></div>`
     };
     if(sortOrder==="desc" ? idx<3 : idx>=filteredLogs.length-3){
       latestLogs.push(logBlock);
@@ -260,9 +261,10 @@ function displayLog(){
 
   // 集計表示
   const sumText=Object.entries(totalSummary).map(([k,v])=>`${k}: ${v}個`).join("\n");
-  summaryDiv.innerHTML=`<b>集計結果（表示中）</b><br><pre>${sumText}</pre>
-    <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumText}\`)'>コピー</button>
-    <button class="save-btn" onclick='saveSummary(\`${sumText}\`)'>txt保存</button>`;
+  const sumTitle = filter==="" ? `全員(${totalTimes}回)` : `${filter}(${totalTimes}回)`;
+  summaryDiv.innerHTML=`<b>集計結果（${sumTitle}）</b><br><pre>${sumText}</pre>
+    <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumTitle}\n${sumText}\`)'>コピー</button>
+    <button class="save-btn" onclick='saveSummary(\`${sumTitle}\n${sumText}\`)'>txt保存</button>`;
 
   // ログ表示
   latestLogs.forEach(l=>{logDiv.innerHTML+=l.html;});
@@ -282,7 +284,10 @@ function displayLog(){
 function clearLog(){if(confirm("全ログと登録名を削除しますか？")){logData=[];players=[];updatePlayerUI();displayLog();}}
 function saveLog(){
   let all="";
-  logData.forEach(entry=>{const txt=entry.results.map(r=>`【${r.rarity}】${r.name}`).join("\n"); all+=`【${entry.player}】\n${txt}\n\n`;});
+  logData.forEach(entry=>{
+    const txt=entry.results.map(r=>`  【${r.rarity}】${r.name} ×1個`).join("\n");
+    all += `${entry.player}(${entry.times}回)\n${txt}\n\n`;
+  });
   const blob=new Blob([all],{type:"text/plain"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download="gacha_log.txt"; a.click();
