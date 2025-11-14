@@ -5,14 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>スマホ用ガチャツール</title>
 <style>
-body { font-family: sans-serif; padding: 10px; background:#f5f5f5; }
-.box { background:white; padding:12px; border-radius:10px; margin-bottom:12px; }
-button { padding:10px 14px; font-size:16px; margin:4px; border-radius:8px; border:none; background:#4a7bd0; color:white; cursor:pointer; }
+body { font-family:sans-serif; margin:0; padding:10px; background:#f0f2f5; }
+.box { background:#fff; padding:12px; border-radius:12px; margin-bottom:12px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+button { padding:12px; font-size:16px; margin:4px 0; border:none; border-radius:8px; background:#4a7bd0; color:#fff; cursor:pointer; }
 button:hover { opacity:0.85; }
 .two-col { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
-textarea,input,select { width:100%; padding:8px; margin-top:5px; border-radius:6px; border:1px solid #aaa; font-size:15px; }
-.rarity-block { background:#eef2ff; padding:10px; border-radius:8px; margin-bottom:10px; }
+input, select, textarea { width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #aaa; font-size:15px; box-sizing:border-box; }
+.rarity-block { background:#eef2ff; padding:10px; border-radius:8px; margin-bottom:8px; }
 details { margin-top:10px; background:#fff; padding:10px; border-radius:6px; }
+label { font-weight:bold; }
+#probDisplay { padding:6px 0; font-size:14px; color:#333; }
 </style>
 </head>
 <body>
@@ -25,7 +27,7 @@ details { margin-top:10px; background:#fff; padding:10px; border-radius:6px; }
   <button onclick="addName()">追加</button>
 </div>
 
-<!-- プリセット -->
+<!-- プリセット / カスタム -->
 <div class="box">
   <h3>プリセット</h3>
   <div class="two-col">
@@ -36,11 +38,12 @@ details { margin-top:10px; background:#fff; padding:10px; border-radius:6px; }
     <button onclick="loadCustom(1)">カスタム1</button>
     <button onclick="loadCustom(2)">カスタム2</button>
   </div>
+  <div id="probDisplay">現在の確率：N- / R- / SR- / UR- / LR-</div>
 </div>
 
 <!-- 景品登録 -->
 <div class="box">
-  <h3>景品登録欄</h3>
+  <h3>景品登録</h3>
   <div id="itemsContainer"></div>
   <button onclick="addItem()">景品追加</button>
 </div>
@@ -79,21 +82,18 @@ details { margin-top:10px; background:#fff; padding:10px; border-radius:6px; }
 </div>
 
 <script>
-let rarities = [];
-let logData = [];
-let names = [];
-let customData = {1:[],2:[]};
+let rarities=[];
+let logData=[];
+let names=[];
+let customData={1:[],2:[]};
 
-/* -------------------
-   名前管理
-------------------- */
-function loadNames() {
-  names = JSON.parse(localStorage.getItem("names")||"[]");
-  const sel = document.getElementById("nameSelect");
+/* 名前管理 */
+function loadNames(){
+  names=JSON.parse(localStorage.getItem("names")||"[]");
+  const sel=document.getElementById("nameSelect");
   sel.innerHTML="";
   names.forEach(n=>{
-    let op=document.createElement("option");
-    op.textContent=n; sel.appendChild(op);
+    let op=document.createElement("option"); op.textContent=n; sel.appendChild(op);
   });
 }
 function addName(){
@@ -104,11 +104,18 @@ function addName(){
   document.getElementById("nameInput").value="";
   loadNames();
 }
-window.onload = loadNames;
+window.onload=()=>{
+  loadNames();
+  if(rarities.length===0) loadPreset('normal');
+  if(document.getElementById("itemsContainer").children.length===0) addItem();
+};
 
-/* -------------------
-   プリセット設定
-------------------- */
+/* プリセット */
+function updateProbDisplay(){
+  if(rarities.length===0) return;
+  const p=rarities.map(r=>r.name+"-"+r.rate+"%").join(" / ");
+  document.getElementById("probDisplay").textContent="現在の確率："+p;
+}
 function loadPreset(type){
   if(type=="normal") rarities = [
     {name:"N",rate:40,items:[]},
@@ -138,17 +145,20 @@ function loadPreset(type){
     {name:"UR",rate:0.49,items:[]},
     {name:"LR",rate:0.01,items:[]}
   ];
-  renderRateList();
+  renderItems();
+  updateProbDisplay();
 }
 function loadCustom(num){
-  rarities = customData[num]||[];
-  renderRateList();
+  rarities = customData[num]||[
+    {name:"N",rate:0,items:[]},{name:"R",rate:0,items:[]},{name:"SR",rate:0,items:[]},
+    {name:"UR",rate:0,items:[]},{name:"LR",rate:0,items:[]}
+  ];
+  renderItems(true);
+  updateProbDisplay();
 }
 
-/* -------------------
-   景品登録
-------------------- */
-function renderRateList(){
+/* 景品登録 */
+function renderItems(editRates=false){
   const container=document.getElementById("itemsContainer");
   container.innerHTML="";
   rarities.forEach((r,i)=>{
@@ -164,27 +174,27 @@ function renderRateList(){
           <option ${r.name=="UR"?"selected":""}>UR</option>
           <option ${r.name=="LR"?"selected":""}>LR</option>
         </select>
+        ${editRates?`<input type="number" value="${r.rate}" style="width:60px;margin-left:6px;" onchange="rarities[${i}].rate=parseFloat(this.value); updateProbDisplay();">`:""}
         <button onclick="removeItem(${i},${j})">削除</button>
       `;
       container.appendChild(div);
     });
+    if(r.items.length===0){ r.items=[""]; renderItems(editRates); }
   });
 }
 function addItem(){
   if(rarities.length==0) rarities.push({name:"N",rate:100,items:[""]});
   rarities[0].items.push("");
-  renderRateList();
+  renderItems();
 }
 function removeItem(i,j){
   rarities[i].items.splice(j,1);
-  renderRateList();
+  renderItems();
 }
 
-/* -------------------
-   ガチャ処理
-------------------- */
+/* ガチャ処理 */
 function rollOnce(){
-  const total=rarities.reduce((a,b)=>a.rate+a,0);
+  const total=rarities.reduce((a,b)=>a+b.rate,0);
   let r=Math.random()*total;
   for(let rt of rarities){
     if(r<rt.rate){
@@ -209,9 +219,7 @@ function rollTimes(n){
   renderSummary();
 }
 
-/* -------------------
-   集計・ログ表示
-------------------- */
+/* 集計・ログ表示 */
 function renderSummary(){
   const sum={};
   logData.forEach(line=>{
@@ -231,9 +239,7 @@ function renderSummary(){
   document.getElementById("log").innerText=logData.join("\n");
 }
 
-/* -------------------
-   コピー・保存
-------------------- */
+/* コピー・保存 */
 function copyLog(){ navigator.clipboard.writeText(log.innerText); }
 function copySummary(){ navigator.clipboard.writeText(summary.innerText); }
 function saveText(text,filename){
@@ -244,9 +250,7 @@ function saveText(text,filename){
   a.click();
 }
 
-/* -------------------
-   全消去
-------------------- */
+/* 全消去 */
 function clearAll(){
   if(!confirm("本当に消す？")) return;
   logData=[];
