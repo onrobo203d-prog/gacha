@@ -61,16 +61,6 @@ pre{white-space:pre-wrap;}
 <body>
 <div id="mainWrapper">
 
-<!-- 名前入力・選択 -->
-<div class="section">
-  <label>ガチャを回す人：</label><br>
-  <input id="playerName" type="text" placeholder="名前を入力">
-  <button class="add-btn" onclick="addPlayer()">名前を追加</button><br>
-
-  <label>下から選択：</label>
-  <select id="playerSelect"></select>
-</div>
-
 <!-- プリセット -->
 <div class="section">
   <label>確率プリセット</label>
@@ -100,6 +90,16 @@ pre{white-space:pre-wrap;}
   <label>景品登録</label>
   <div id="items"></div>
   <button class="add-btn" onclick="addItem()">＋ 景品追加</button>
+</div>
+
+<!-- プレイヤー登録欄（ガチャ実行上） -->
+<div class="section">
+  <label>ガチャを回す人：</label><br>
+  <input id="playerName" type="text" placeholder="名前を入力">
+  <button class="add-btn" onclick="addPlayer()">名前を追加</button><br>
+
+  <label>下から選択：</label>
+  <select id="playerSelect"></select>
 </div>
 
 <!-- ガチャ実行 -->
