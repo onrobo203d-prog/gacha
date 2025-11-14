@@ -1,330 +1,260 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ガチャツール</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スマホ用ガチャツール</title>
 <style>
-    body { font-family: sans-serif; padding: 15px; background: #f5f5f5; }
-    button {
-        padding: 10px 14px;
-        font-size: 16px;
-        margin: 4px;
-        border-radius: 8px;
-        border: none;
-        background: #4a7bd0;
-        color: white;
-        cursor: pointer;
-    }
-    button:hover { opacity: 0.85; }
-    .two-col {
-        display: grid; grid-template-columns: 1fr 1fr;
-        gap: 6px; margin-bottom: 10px;
-    }
-    .box {
-        background: white; padding: 12px; border-radius: 10px; margin-bottom: 15px;
-    }
-    textarea, input, select {
-        width: 100%; padding: 8px; font-size: 15px;
-        margin-top: 5px; border-radius: 6px; border: 1px solid #aaa;
-    }
-    .rarity-block {
-        background: #eef2ff; padding: 10px; border-radius: 8px;
-        margin-bottom: 10px;
-    }
-    details {
-        margin-top: 10px;
-        background: #fff;
-        padding: 10px; border-radius: 6px;
-    }
+body { font-family: sans-serif; padding: 10px; background:#f5f5f5; }
+.box { background:white; padding:12px; border-radius:10px; margin-bottom:12px; }
+button { padding:10px 14px; font-size:16px; margin:4px; border-radius:8px; border:none; background:#4a7bd0; color:white; cursor:pointer; }
+button:hover { opacity:0.85; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+textarea,input,select { width:100%; padding:8px; margin-top:5px; border-radius:6px; border:1px solid #aaa; font-size:15px; }
+.rarity-block { background:#eef2ff; padding:10px; border-radius:8px; margin-bottom:10px; }
+details { margin-top:10px; background:#fff; padding:10px; border-radius:6px; }
 </style>
 </head>
 <body>
 
-<!-- ガチャ担当 -->
+<!-- 名前管理 -->
 <div class="box">
-    <label>下から選択：</label>
-    <select id="nameSelect"></select>
-
-    <input id="nameInput" type="text" placeholder="名前を追加">
-    <button onclick="addName()">追加</button>
+  <label>名前を選択：</label>
+  <select id="nameSelect"></select>
+  <input id="nameInput" type="text" placeholder="名前を追加">
+  <button onclick="addName()">追加</button>
 </div>
 
-<!-- プリセット選択 -->
+<!-- プリセット -->
 <div class="box">
-    <h3>プリセット / カスタム</h3>
-    <div class="two-col">
-        <button onclick="loadPreset('normal')">通常</button>
-        <button onclick="loadPreset('hard')">キツめ</button>
-        <button onclick="loadPreset('evil')">極悪</button>
-        <button onclick="loadPreset('hell')">地獄</button>
-        <button onclick="loadCustom(1)">カスタム1</button>
-        <button onclick="loadCustom(2)">カスタム2</button>
-    </div>
+  <h3>プリセット</h3>
+  <div class="two-col">
+    <button onclick="loadPreset('normal')">通常</button>
+    <button onclick="loadPreset('hard')">キツめ</button>
+    <button onclick="loadPreset('evil')">極悪</button>
+    <button onclick="loadPreset('hell')">地獄</button>
+    <button onclick="loadCustom(1)">カスタム1</button>
+    <button onclick="loadCustom(2)">カスタム2</button>
+  </div>
+</div>
 
-    <!-- カスタム編集欄 -->
-    <div class="box" id="customArea" style="display:none;">
-        <h4>カスタム編集（確率と景品）</h4>
-        <div id="rarityContainer"></div>
-        <button onclick="addRarity()">レアリティ追加</button>
-        <button onclick="saveCustom()">保存</button>
-    </div>
-
-    <!-- 確率一覧 -->
-    <div class="box">
-        <h4>現在の確率セット</h4>
-        <div id="rateList"></div>
-    </div>
+<!-- 景品登録 -->
+<div class="box">
+  <h3>景品登録欄</h3>
+  <div id="itemsContainer"></div>
+  <button onclick="addItem()">景品追加</button>
 </div>
 
 <!-- ガチャ実行 -->
 <div class="box">
-    <h3>ガチャを回す</h3>
-    <button onclick="rollGacha()">1回回す</button>
-    <button onclick="rollMulti(10)">10連</button>
+  <h3>ガチャを回す</h3>
+  <button onclick="rollGacha()">1回</button>
+  <button onclick="rollMulti(5)">5回</button>
+  <button onclick="rollMulti(10)">10回</button>
+  <input type="number" id="customCount" placeholder="回数入力">
+  <button onclick="rollCustom()">回す</button>
 </div>
 
-<!-- 集計結果 -->
+<!-- 集計 -->
 <div class="box">
-    <h3>景品別集計</h3>
-    <div id="summary"></div>
-    <button onclick="copySummary()">コピー</button>
-    <button onclick="saveText(summary.innerText,'summary.txt')">txt保存</button>
+  <h3>景品別集計</h3>
+  <div id="summary"></div>
+  <button onclick="copySummary()">コピー</button>
+  <button onclick="saveText(summary.innerText,'summary.txt')">txt保存</button>
 </div>
 
 <!-- 詳細ログ -->
 <div class="box">
-    <details>
-        <summary>詳細ログ（開く）</summary>
-        <pre id="log"></pre>
-        <button onclick="copyLog()">コピー</button>
-        <button onclick="saveText(log.innerText,'log.txt')">txt保存</button>
-    </details>
+  <details>
+    <summary>詳細ログ（開く）</summary>
+    <pre id="log"></pre>
+    <button onclick="copyLog()">コピー</button>
+    <button onclick="saveText(log.innerText,'log.txt')">txt保存</button>
+  </details>
 </div>
 
 <!-- 全ログ消去 -->
 <div class="box">
-    <button onclick="clearAll()">全ログ消去（名前も消える）</button>
+  <button onclick="clearAll()">全ログ消去（名前も消える）</button>
 </div>
 
 <script>
 let rarities = [];
-let currentCustom = null;
 let logData = [];
 let names = [];
+let customData = {1:[],2:[]};
 
-/* ------------------------------
-   初期ロード
------------------------------- */
-window.onload = () => {
-    loadNames();
-};
-
-/* ------------------------------
+/* -------------------
    名前管理
------------------------------- */
+------------------- */
 function loadNames() {
-    names = JSON.parse(localStorage.getItem("names") || "[]");
-    nameSelect.innerHTML = "";
-    names.forEach(n => {
-        let op = document.createElement("option");
-        op.textContent = n;
-        nameSelect.appendChild(op);
+  names = JSON.parse(localStorage.getItem("names")||"[]");
+  const sel = document.getElementById("nameSelect");
+  sel.innerHTML="";
+  names.forEach(n=>{
+    let op=document.createElement("option");
+    op.textContent=n; sel.appendChild(op);
+  });
+}
+function addName(){
+  const v=document.getElementById("nameInput").value.trim();
+  if(!v) return;
+  names.push(v);
+  localStorage.setItem("names",JSON.stringify(names));
+  document.getElementById("nameInput").value="";
+  loadNames();
+}
+window.onload = loadNames;
+
+/* -------------------
+   プリセット設定
+------------------- */
+function loadPreset(type){
+  if(type=="normal") rarities = [
+    {name:"N",rate:40,items:[]},
+    {name:"R",rate:35,items:[]},
+    {name:"SR",rate:15,items:[]},
+    {name:"UR",rate:7,items:[]},
+    {name:"LR",rate:3,items:[]}
+  ];
+  if(type=="hard") rarities = [
+    {name:"N",rate:60,items:[]},
+    {name:"R",rate:30,items:[]},
+    {name:"SR",rate:7,items:[]},
+    {name:"UR",rate:2,items:[]},
+    {name:"LR",rate:1,items:[]}
+  ];
+  if(type=="evil") rarities = [
+    {name:"N",rate:70,items:[]},
+    {name:"R",rate:25,items:[]},
+    {name:"SR",rate:4,items:[]},
+    {name:"UR",rate:1,items:[]},
+    {name:"LR",rate:0.5,items:[]}
+  ];
+  if(type=="hell") rarities = [
+    {name:"N",rate:78.5,items:[]},
+    {name:"R",rate:20,items:[]},
+    {name:"SR",rate:1,items:[]},
+    {name:"UR",rate:0.49,items:[]},
+    {name:"LR",rate:0.01,items:[]}
+  ];
+  renderRateList();
+}
+function loadCustom(num){
+  rarities = customData[num]||[];
+  renderRateList();
+}
+
+/* -------------------
+   景品登録
+------------------- */
+function renderRateList(){
+  const container=document.getElementById("itemsContainer");
+  container.innerHTML="";
+  rarities.forEach((r,i)=>{
+    r.items.forEach((it,j)=>{
+      const div=document.createElement("div");
+      div.className="rarity-block";
+      div.innerHTML=`
+        <input value="${it}" placeholder="景品名" onchange="rarities[${i}].items[${j}]=this.value">
+        <select onchange="rarities[${i}].items[${j}]=this.value">
+          <option ${r.name=="N"?"selected":""}>N</option>
+          <option ${r.name=="R"?"selected":""}>R</option>
+          <option ${r.name=="SR"?"selected":""}>SR</option>
+          <option ${r.name=="UR"?"selected":""}>UR</option>
+          <option ${r.name=="LR"?"selected":""}>LR</option>
+        </select>
+        <button onclick="removeItem(${i},${j})">削除</button>
+      `;
+      container.appendChild(div);
     });
+  });
 }
-function addName() {
-    const v = nameInput.value.trim();
-    if (!v) return;
-    names.push(v);
-    localStorage.setItem("names", JSON.stringify(names));
-    nameInput.value = "";
-    loadNames();
+function addItem(){
+  if(rarities.length==0) rarities.push({name:"N",rate:100,items:[""]});
+  rarities[0].items.push("");
+  renderRateList();
 }
-
-/* ------------------------------
-   プリセット
------------------------------- */
-function loadPreset(type) {
-    currentCustom = null;
-    customArea.style.display = "none";
-
-    if (type === "normal") {
-        rarities = [
-            { name:"N", rate:70, items:["N景品1","N景品2"] },
-            { name:"R", rate:20, items:["R景品"] },
-            { name:"SR", rate:9, items:["SR景品"] },
-            { name:"UR", rate:1, items:["UR景品"] }
-        ];
-    }
-    if (type === "hard") {
-        rarities = [
-            { name:"N", rate:80, items:["N景品"] },
-            { name:"R", rate:15, items:["R景品"] },
-            { name:"SR", rate:5, items:["SR景品"] }
-        ];
-    }
-    if (type === "evil") {
-        rarities = [
-            { name:"N", rate:90, items:["N景品"] },
-            { name:"R", rate:9, items:["R景品"] },
-            { name:"SR", rate:1, items:["SR景品"] }
-        ];
-    }
-    if (type === "hell") {
-        rarities = [
-            { name:"N", rate:99.9, items:["N景品"] },
-            { name:"LR", rate:0.1, items:["地獄LR"] }
-        ];
-    }
-    renderRateList();
-    renderSummary();
+function removeItem(i,j){
+  rarities[i].items.splice(j,1);
+  renderRateList();
 }
 
-/* ------------------------------
-   カスタム読込
------------------------------- */
-function loadCustom(num) {
-    currentCustom = num;
-    customArea.style.display = "block";
-
-    let data = localStorage.getItem("custom"+num);
-    rarities = data ? JSON.parse(data) : [];
-    renderCustomEditor();
-    renderRateList();
-}
-
-/* カスタム編集UI */
-function renderCustomEditor() {
-    rarityContainer.innerHTML = "";
-
-    rarities.forEach((r,i)=>{
-        let div = document.createElement("div");
-        div.className="rarity-block";
-        div.innerHTML = `
-            レアリティ名：
-            <input value="${r.name}" onchange="rarities[${i}].name=this.value">
-
-            確率：
-            <input type="number" value="${r.rate}" onchange="rarities[${i}].rate=Number(this.value)">
-
-            景品一覧（1行1つ）：
-            <textarea rows="4" onchange="updateItems(${i},this.value)">${r.items.join("\n")}</textarea>
-        `;
-        rarityContainer.appendChild(div);
-    });
-}
-
-/* 景品変更 */
-function updateItems(i,val){
-    rarities[i].items = val.split("\n").filter(x=>x);
-}
-
-function addRarity(){
-    rarities.push({name:"NEW",rate:0,items:["景品"]});
-    renderCustomEditor();
-}
-
-/* カスタム保存 */
-function saveCustom(){
-    if(!currentCustom) return;
-    localStorage.setItem("custom"+currentCustom, JSON.stringify(rarities));
-    alert("カスタム"+currentCustom+" を保存しました");
-    renderRateList();
-}
-
-/* ------------------------------
-   確率一覧表示
------------------------------- */
-function renderRateList() {
-    let html = "";
-    rarities.forEach(r=>{
-        html += `【${r.name}】 ${r.rate}%<br>`;
-    });
-    rateList.innerHTML = html;
-}
-
-/* ------------------------------
+/* -------------------
    ガチャ処理
------------------------------- */
+------------------- */
 function rollOnce(){
-    let total = rarities.reduce((a,b)=>a+b.rate,0);
-    let r = Math.random()*total;
-
-    for (let rt of rarities) {
-        if (r < rt.rate) {
-            const item = rt.items[Math.floor(Math.random()*rt.items.length)];
-            return {rarity:rt.name, item};
-        }
-        r -= rt.rate;
+  const total=rarities.reduce((a,b)=>a.rate+a,0);
+  let r=Math.random()*total;
+  for(let rt of rarities){
+    if(r<rt.rate){
+      const item=rt.items.length?rt.items[Math.floor(Math.random()*rt.items.length)]:"未登録";
+      return {rarity:rt.name,item};
     }
+    r-=rt.rate;
+  }
 }
-
-function rollGacha(){
-    const name = nameSelect.value || "名無し";
-    const r = rollOnce();
+function rollGacha(){ rollTimes(1); }
+function rollMulti(n){ rollTimes(n); }
+function rollCustom(){
+  const n=parseInt(document.getElementById("customCount").value)||1;
+  rollTimes(n);
+}
+function rollTimes(n){
+  const name=document.getElementById("nameSelect").value||"名無し";
+  for(let i=0;i<n;i++){
+    const r=rollOnce();
     logData.push(`[${name}] 【${r.rarity}】${r.item}`);
-    renderSummary();
-}
-function rollMulti(n){
-    const name = nameSelect.value || "名無し";
-    for(let i=0;i<n;i++){
-        const r = rollOnce();
-        logData.push(`[${name}] 【${r.rarity}】${r.item}`);
-    }
-    renderSummary();
+  }
+  renderSummary();
 }
 
-/* ------------------------------
-   集計
------------------------------- */
+/* -------------------
+   集計・ログ表示
+------------------- */
 function renderSummary(){
-    const sum={};
-
-    logData.forEach(line=>{
-        const m=line.match(/【(.+?)】(.+)/);
-        if(!m) return;
-        const rarity=m[1], item=m[2];
-        const key=rarity+"___"+item;
-        sum[key]=(sum[key]||0)+1;
-    });
-
-    let keys=Object.keys(sum).sort();
-    let html="";
-    keys.forEach(k=>{
-        let [rar,item]=k.split("___");
-        html+=`【${rar}】${item}：${sum[k]}個<br>`;
-    });
-
-    summary.innerHTML=html;
-    log.innerText=logData.join("\n");
+  const sum={};
+  logData.forEach(line=>{
+    const m=line.match(/【(.+?)】(.+)/);
+    if(!m) return;
+    const rarity=m[1], item=m[2];
+    const key=rarity+"___"+item;
+    sum[key]=(sum[key]||0)+1;
+  });
+  let keys=Object.keys(sum).sort();
+  let html="";
+  keys.forEach(k=>{
+    const [rar,item]=k.split("___");
+    html+=`【${rar}】${item}：${sum[k]}個<br>`;
+  });
+  document.getElementById("summary").innerHTML=html;
+  document.getElementById("log").innerText=logData.join("\n");
 }
 
-/* ------------------------------
+/* -------------------
    コピー・保存
------------------------------- */
+------------------- */
 function copyLog(){ navigator.clipboard.writeText(log.innerText); }
 function copySummary(){ navigator.clipboard.writeText(summary.innerText); }
 function saveText(text,filename){
-    const blob=new Blob([text],{type:"text/plain"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download=filename;
-    a.click();
+  const blob=new Blob([text],{type:"text/plain"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
 }
 
-/* ------------------------------
+/* -------------------
    全消去
------------------------------- */
+------------------- */
 function clearAll(){
-    if(!confirm("本当に消す？")) return;
-    logData=[];
-    localStorage.removeItem("names");
-    names=[];
-    loadNames();
-    renderSummary();
+  if(!confirm("本当に消す？")) return;
+  logData=[];
+  localStorage.removeItem("names");
+  names=[];
+  loadNames();
+  renderSummary();
 }
 </script>
-
 </body>
 </html>
