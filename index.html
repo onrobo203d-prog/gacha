@@ -71,7 +71,7 @@ pre{white-space:pre-wrap;}
   <select id="playerSelect"></select>
 </div>
 
-<!-- プリセット 2列 -->
+<!-- プリセット -->
 <div class="section">
   <label>確率プリセット</label>
   <div class="preset-grid">
@@ -119,7 +119,13 @@ pre{white-space:pre-wrap;}
   <label>ガチャ結果ログ</label><br>
 
   <label>名前で絞り込み：</label>
-  <select id="logFilter" onchange="filterLog()"></select>
+  <select id="logFilter" onchange="displayLog()"></select>
+
+  <label>表示順：</label>
+  <select id="sortOrder" onchange="displayLog()">
+    <option value="desc" selected>新しい順</option>
+    <option value="asc">古い順</option>
+  </select>
 
   <div id="logControls">
     <button class="clear-btn" onclick="clearLog()" style="margin-right:10px;">全ログ消去</button>
@@ -220,36 +226,35 @@ function addLog(player,results,times){
   logData.push({player,results,times});
   displayLog();
 }
+
 function displayLog(){
   const filter=document.getElementById("logFilter").value;
+  const sortOrder=document.getElementById("sortOrder").value;
   const summaryDiv=document.getElementById("summary");
   const logDiv=document.getElementById("log");
   summaryDiv.innerHTML=""; logDiv.innerHTML="";
 
-  // 集計用
-  let totalSummary={};
+  let filteredLogs = logData.filter(entry=>filter===""||entry.player===filter);
+  if(sortOrder==="desc") filteredLogs = filteredLogs.slice().reverse();
 
-  // 最新ログと古いログ分け
+  let totalSummary={};
   let latestLogs=[], oldLogs=[];
 
-  logData.forEach((entry,idx)=>{
-    if(filter==="" || entry.player===filter){
-      const countMap={};
-      entry.results.forEach(r=>{
-        const key=`【${r.rarity}】${r.name}`;
-        countMap[key]=(countMap[key]||0)+1;
-        totalSummary[key]=(totalSummary[key]||0)+1;
-      });
-      const logText=Object.entries(countMap).map(([k,v])=>`  ${k} ×${v}個`).join("\n");
-      const logBlock={
-        html:`<div class="log-block"><b>${entry.player}（${entry.times}回）</b><pre>${logText}</pre><button class="copy-btn" onclick='navigator.clipboard.writeText(\`${logText}\`)'>コピー</button></div>`,
-        idx
-      };
-      if(idx>=logData.length-3){ // 最新3件を展開
-        latestLogs.push(logBlock);
-      }else{
-        oldLogs.push(logBlock);
-      }
+  filteredLogs.forEach((entry,idx)=>{
+    const countMap={};
+    entry.results.forEach(r=>{
+      const key=`【${r.rarity}】${r.name}`;
+      countMap[key]=(countMap[key]||0)+1;
+      totalSummary[key]=(totalSummary[key]||0)+1;
+    });
+    const logText=Object.entries(countMap).map(([k,v])=>`  ${k} ×${v}個`).join("\n");
+    const logBlock={
+      html:`<div class="log-block"><b>${entry.player}（${entry.times}回）</b><pre>${logText}</pre><button class="copy-btn" onclick='navigator.clipboard.writeText(\`${logText}\`)'>コピー</button></div>`
+    };
+    if(sortOrder==="desc" ? idx<3 : idx>=filteredLogs.length-3){
+      latestLogs.push(logBlock);
+    }else{
+      oldLogs.push(logBlock);
     }
   });
 
@@ -259,7 +264,7 @@ function displayLog(){
     <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumText}\`)'>コピー</button>
     <button class="save-btn" onclick='saveSummary(\`${sumText}\`)'>txt保存</button>`;
 
-  // ログ表示（最新→古い）
+  // ログ表示
   latestLogs.forEach(l=>{logDiv.innerHTML+=l.html;});
   if(oldLogs.length>0){
     const oldDiv=document.createElement("div");
@@ -274,7 +279,6 @@ function displayLog(){
 }
 
 /* フィルター・消去・保存 */
-function filterLog(){displayLog();}
 function clearLog(){if(confirm("全ログと登録名を削除しますか？")){logData=[];players=[];updatePlayerUI();displayLog();}}
 function saveLog(){
   let all="";
