@@ -43,20 +43,19 @@ button{cursor:pointer;border:none;border-radius:6px;}
 .N{color:#00ccff;} .R{color:#0055ff;}
 .SR{color:#aa00ff;} .UR{color:#ff55aa;}
 .LR{color:#ff0000;}
+#logControls{margin:5px 0;}
+pre{white-space:pre-wrap;}
 </style>
 </head>
 <body>
 <div id="mainWrapper">
 
-<!-- 名前入力・選択（一覧は削除済） -->
+<!-- 名前入力・選択 -->
 <div class="section">
   <label>ガチャを回す人：</label><br>
   <input id="playerName" type="text" placeholder="名前を入力">
   <button class="add-btn" onclick="addPlayer()">名前を追加</button><br>
 
-  <!-- ★ 一覧削除済 -->
-
-  <!-- ★ 文言：ガチャ担当 → 下から選択 -->
   <label>下から選択：</label>
   <select id="playerSelect"></select>
 </div>
@@ -111,10 +110,12 @@ button{cursor:pointer;border:none;border-radius:6px;}
   <label>名前で絞り込み：</label>
   <select id="logFilter" onchange="filterLog()"></select>
 
-  <div id="log"></div>
+  <div id="logControls">
+    <button class="clear-btn" onclick="clearLog()" style="margin-right:10px;">全ログ消去</button>
+    <button class="save-btn" onclick="saveLog()">ログをtxt保存</button>
+  </div>
 
-  <button class="save-btn" onclick="saveLog()">結果をtxtで保存</button>
-  <button class="clear-btn" onclick="clearLog()">全ログ消去</button>
+  <div id="log"></div>
 </div>
 
 </div>
@@ -125,7 +126,7 @@ let logData = [];
 addItem();
 
 /* -------------------------
-      名前の管理（一覧削除済）
+      名前の管理
 --------------------------*/
 function addPlayer(){
   const name=document.getElementById("playerName").value.trim();
@@ -263,33 +264,56 @@ function displayLog(){
 
   let summary={};
 
-  logData.forEach(entry=>{
+  logData.forEach((entry, idx)=>{
     if(filter==="" || entry.player===filter){
-      let wrap=document.createElement("div");
+      const wrap=document.createElement("div");
       wrap.style.marginBottom="10px";
-      wrap.innerHTML=`<b>${entry.player}</b><br>` + entry.results.join("<br>");
 
-      const txt = entry.results.map(x=>x.replace(/<[^>]+>/g,"")).join("\n");
-      wrap.innerHTML += `<br><button class="copy-btn" onclick='navigator.clipboard.writeText(\`${txt}\`)'>コピー</button>`;
+      const header=document.createElement("div");
+      header.innerHTML=`<b>${entry.player}</b> <button onclick="toggleLog(${idx})">詳細確認</button>`;
+      wrap.appendChild(header);
+
+      const content=document.createElement("div");
+      content.id=`logContent_${idx}`;
+      content.style.display="none";
+      content.innerHTML=entry.results.join("<br>") + `<br>
+        <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${entry.results.map(x=>x.replace(/<[^>]+>/g,"")).join("\n")}\`)'>コピー</button>`;
+      wrap.appendChild(content);
 
       logDiv.prepend(wrap);
 
       entry.results.forEach(r=>{
-        const txt=r.replace(/<[^>]+>/g,"").split(" [")[0];
-        summary[txt]=(summary[txt]||0)+1;
+        const match = r.match(/<span class="(\w+)">(.+?) \[\w+\]<\/span>/);
+        if(match){
+          const rarity=match[1];
+          const name=match[2];
+          const key=`【${rarity}】${name}`;
+          summary[key]=(summary[key]||0)+1;
+        }
       });
     }
   });
 
+  // 集計結果
   if(Object.keys(summary).length>0){
     const sumDiv=document.createElement("div");
     sumDiv.style.border="1px solid #333";
     sumDiv.style.padding="8px";
     sumDiv.style.background="#eee";
-    sumDiv.innerHTML="<b>集計結果</b><br>"+
-      Object.entries(summary).map(([k,v])=>`${k}: ${v}`).join("<br>");
+
+    const sumText = Object.entries(summary).map(([k,v])=>`${k}: ${v}個`).join("\n");
+    sumDiv.innerHTML=`<b>集計結果</b><br><pre>${sumText}</pre>
+      <button class="copy-btn" onclick='navigator.clipboard.writeText(\`${sumText}\`)'>コピー</button>
+      <button class="save-btn" onclick='saveSummary(\`${sumText}\`)'>txt保存</button>`;
+
     logDiv.prepend(sumDiv);
   }
+}
+
+function toggleLog(idx){
+  const el=document.getElementById(`logContent_${idx}`);
+  if(el.style.display==="none") el.style.display="block";
+  else el.style.display="none";
 }
 
 function filterLog(){
@@ -321,6 +345,18 @@ function saveLog(){
   const a=document.createElement("a");
   a.href=url;
   a.download="gacha_log.txt";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function saveSummary(text){
+  const blob=new Blob([text],{type:"text/plain"});
+  const url=URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="gacha_summary.txt";
   a.click();
 
   URL.revokeObjectURL(url);
