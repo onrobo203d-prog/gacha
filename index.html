@@ -284,11 +284,10 @@ function displayLog(){
   filteredLogs.forEach((entry,idx)=>{
     totalTimes += entry.times;
 
-    // 天井アイテムと通常アイテムを分ける
     const ceilingItems = entry.results.filter(r=>r.ceiling);
     const normalItems = entry.results.filter(r=>!r.ceiling);
 
-    // 通常アイテムは同じものをまとめる
+    // 通常アイテムをまとめる
     const normalCount = {};
     normalItems.forEach(r=>{
       const key = r.rarity ? `【${r.rarity}】${r.name}` : r.name;
@@ -296,17 +295,22 @@ function displayLog(){
       totalSummary[key] = (totalSummary[key]||0)+1;
     });
 
-    // 天井アイテムは個別表示（集計には含める）
+    // 天井アイテム集計
     ceilingItems.forEach(r=>{
       const key = r.rarity ? `【${r.rarity}】${r.name}` : r.name;
       totalSummary[key] = (totalSummary[key]||0)+1;
     });
 
-    // ログ用テキスト作成
-    let logText = '';
-    for(const [key,count] of Object.entries(normalCount)){
-      logText += `  ${key} ×${count}個\n`;
-    }
+    // ログ用テキスト作成（レアリティ順: N→R→SR→UR→LR → 天井）
+    const rarityOrder = ["N","R","SR","UR","LR"];
+    let logText = "";
+    rarityOrder.forEach(r=>{
+      for(const [key,count] of Object.entries(normalCount)){
+        if(key.startsWith(`【${r}】`) || (r==="N" && !key.startsWith("【"))) {
+          logText += `  ${key} ×${count}個\n`;
+        }
+      }
+    });
     ceilingItems.forEach(r=>{
       const key = r.rarity ? `【${r.rarity}】${r.name}` : r.name;
       logText += `  ${key} (天井) ×1個\n`;
@@ -335,7 +339,7 @@ function displayLog(){
     logDiv.appendChild(oldDiv);
   }
 
-  // 集計表示（天井フラグは無視）
+  // 集計表示
   const sumText=Object.entries(totalSummary).map(([k,v])=>`${k}: ${v}個`).join("\n");
   const sumTitle = filter==="" ? `全員(${totalTimes}回)` : `${filter}(${totalTimes}回)`;
   summaryDiv.innerHTML=`<b>集計結果（${sumTitle}）</b><br><pre>${sumText}</pre>
@@ -351,17 +355,21 @@ function saveLog(){
     const ceilingItems = entry.results.filter(r=>r.ceiling);
     const normalItems = entry.results.filter(r=>!r.ceiling);
 
-    // 通常はまとめて
     const normalCount = {};
     normalItems.forEach(r=>{
       const key = r.rarity ? `【${r.rarity}】${r.name}` : r.name;
       normalCount[key] = (normalCount[key]||0)+1;
     });
 
-    let txt = '';
-    for(const [key,count] of Object.entries(normalCount)){
-      txt += `${key} ×${count}個\n`;
-    }
+    const rarityOrder = ["N","R","SR","UR","LR"];
+    let txt = "";
+    rarityOrder.forEach(r=>{
+      for(const [key,count] of Object.entries(normalCount)){
+        if(key.startsWith(`【${r}】`) || (r==="N" && !key.startsWith("【"))) {
+          txt += `${key} ×${count}個\n`;
+        }
+      }
+    });
     ceilingItems.forEach(r=>{
       const key = r.rarity ? `【${r.rarity}】${r.name}` : r.name;
       txt += `${key} (天井) ×1個\n`;
